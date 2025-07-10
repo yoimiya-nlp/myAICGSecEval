@@ -30,9 +30,8 @@
 
 AICGSecEval (AI Code Generation Security Evaluation) 提供了一种全新的项目级AI生成代码安全评测基准，旨在通过模拟真实世界AI编程过程，评估大语言模型（LLM）生成代码在安全性方面的表现。
 
-<div style="text-align:center">
-  <img src="./img/arch.png" width="90%" height="90%">
-</div>
+<img src="./img/arch.png" width="90%" height="90%">
+
 
 > 🏆 [榜单传送门](https://aicgseceval.tencent.com/rank)
 
