@@ -12,19 +12,17 @@ current version: 1.0
 
 ## Table of Contents
 
-- [AICGSecEval (AI Code Generation Security Evaluation)](#aicgseceval-ai-code-generation-security-evaluation)
-  - [Table of Contents](#table-of-contents)
-  - [📖 Overview](#-overview)
-  - [✨ Highlight Design](#-highlight-design)
-  - [🚀 Evaluating LLM via AICGSecEval](#-evaluating-llm-via-aicgseceval)
-    - [Environment Configuration](#environment-configuration)
-    - [Run Example](#run-example)
-    - [LLM Call Support](#llm-call-support)
-    - [Submit to Leaderboard](#submit-to-leaderboard)
-  - [💭 Future Plans](#-future-plans)
-  - [🤝 Contribution](#-contribution)
-  - [🙏 Acknowledgements](#-acknowledgements)
-  - [📄 License](#-license)
+- [📖 Overview](#-overview)
+- [✨ Highlight Design](#-highlight-design)
+- [🚀 Evaluating LLM via AICGSecEval](#-evaluating-llm-via-aicgseceval)
+  - [Environment Configuration](#environment-configuration)
+  - [Run Example](#run-example)
+  - [LLM Call Support](#llm-call-support)
+  - [Submit to Leaderboard](#submit-to-leaderboard)
+- [💭 Future Plans](#-future-plans)
+- [🤝 Contribution](#-contribution)
+- [🙏 Acknowledgements](#-acknowledgements)
+- [📄 License](#-license)
 
 
 
