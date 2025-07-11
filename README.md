@@ -126,6 +126,7 @@ We sincerely welcome suggestions and contributions from the community!
 * Submit Code: [Create a Pull Request](https://github.com/Tencent/AICGSecEval/pulls)
 
 **WeChat Group**
+
 <img src="./img/wechat.jpg">
 
 
