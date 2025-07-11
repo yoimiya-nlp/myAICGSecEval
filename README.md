@@ -7,22 +7,24 @@ The pioneering repository-level AI-generated code security evaluation framework 
 current version: 1.0
 
 **用户反馈问卷**：https://doc.weixin.qq.com/forms/AJEAIQdfAAoARwAuganAD0CN2ZD20i6Sf
-> 为了打造更加全面、可靠、科学的 AI 生成代码安全评测基准，吸引更多用户共建，在此特别邀请您参与一个2分钟的用户需求调研，对于有价值的反馈我们后续将会安排寄送腾讯精美礼品，感谢大家的关注与支持。
+> 为了打造更加全面、可靠、科学的 AI 生成代码安全性评测基准，吸引更多用户共建，在此特别邀请您参与一个2分钟的用户需求调研，对于有价值的反馈我们后续将会安排寄送腾讯精美礼品，感谢大家的关注与支持。
 
 
 ## Table of Contents
 
-- [📖 Overview](#-overview)
-- [✨ Highlight Design](#-highlight-design)
-- [🚀 Evaluating LLM via AICGSecEval](#-evaluating-llm-via-aicgseceval)
-  - [Environment Configuration](#environment-configuration)
-  - [Run Example](#run-example)
-  - [LLM Call Support](#llm-call-support)
-  - [Submit to Leaderboard](#submit-to-leaderboard)
-- [💭 Future Plans](#-future-plans)
-- [🤝 Contribution](#-contribution)
-- [🙏 Acknowledgements](#-acknowledgements)
-- [📄 License](#-license)
+- [AICGSecEval (AI Code Generation Security Evaluation)](#aicgseceval-ai-code-generation-security-evaluation)
+  - [Table of Contents](#table-of-contents)
+  - [📖 Overview](#-overview)
+  - [✨ Highlight Design](#-highlight-design)
+  - [🚀 Evaluating LLM via AICGSecEval](#-evaluating-llm-via-aicgseceval)
+    - [Environment Configuration](#environment-configuration)
+    - [Run Example](#run-example)
+    - [LLM Call Support](#llm-call-support)
+    - [Submit to Leaderboard](#submit-to-leaderboard)
+  - [💭 Future Plans](#-future-plans)
+  - [🤝 Contribution](#-contribution)
+  - [🙏 Acknowledgements](#-acknowledgements)
+  - [📄 License](#-license)
 
 
 
