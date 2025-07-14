@@ -368,9 +368,3 @@ def print_detail_result(output_dir, model_name, batch_id, formatted_results):
     logger.info(f"评估结果已保存到 {os.path.join(output_dir, f'{model_name}__{batch_id}_eval_result.txt')}")
 
 
-if __name__ == "__main__":
-    generated_code_dir = "/Users/kekelian/Desktop/2-AI生成代码安全/00-评测集构建/swe-bench-security/outputs/generated_code"
-    model_name = "hunyuan-t1-20250321"
-    batch_id = "v1"
-    dataset_path = "data/filtered_data.json"
-    evaluate_score(generated_code_dir, model_name, batch_id, dataset_path)
