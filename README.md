@@ -58,7 +58,7 @@ AICGSecEval builds a multi-dimensional evaluation system to comprehensively eval
 
 ### Environment Configuration
 
-* Hardware Requirements: Available disk space of 50GB or more, recommended memory of 8GB or more
+* Hardware Requirements: Available disk space of 50GB or more, recommended memory of 16GB or more
 
 * Python Version: 3.11 or higher
     ```
