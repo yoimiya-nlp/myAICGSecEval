@@ -14,7 +14,7 @@ current version: 1.0
 
 - [📖 Overview](#-overview)
 - [✨ Highlight Design](#-highlight-design)
-- [🚀 Evaluating LLM via A.S.E](#-evaluating-llm-via-a.s.e)
+- [🚀 Evaluating LLM via A.S.E](#-evaluating-llm-via-ase)
   - [Environment Configuration](#environment-configuration)
   - [Run Example](#run-example)
   - [LLM Call Support](#llm-call-support)
