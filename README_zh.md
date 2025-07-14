@@ -38,7 +38,7 @@ AICGSecEval 构建了多维度评估体系，全面检测 LLM 的代码生成能
 
 > 🏆 [榜单传送门](https://aicgseceval.tencent.com/rank)
 
-<img src="./img/arch.svg">
+<img src="./img/arch.svg" style="display: block; margin-left: auto; margin-right: auto;">
 
 
 
