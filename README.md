@@ -40,7 +40,7 @@ AICGSecEval builds a multi-dimensional evaluation system to comprehensively eval
 
 > 🏆 [Leaderboard](https://aicgseceval.tencent.com/rank)
 
-<img src="./img/arch_en.png">
+<img src="./img/arch_en.svg">
 
 
 ## ✨ Highlight Design
