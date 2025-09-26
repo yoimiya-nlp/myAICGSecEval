@@ -1,4 +1,5 @@
 import base64
+from calendar import c
 import datetime
 import hashlib
 import hmac
@@ -20,6 +21,7 @@ from tqdm import tqdm
 import os
 import logging
 from bench.utils import is_test
+from openai import OpenAI
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -398,6 +400,17 @@ def call_llm(base_url, openai_key, model_name, system_message, user_message, max
 
     if "claude" in model_name:
         response = openai.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_message}, 
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=max_gen_token,
+            **model_args
+        )
+    elif "deepseek" in model_name:
+        client = OpenAI(api_key=openai_key, base_url=base_url)
+        response = client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": system_message}, 
