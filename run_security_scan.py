@@ -13,11 +13,18 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def scan_single_folder(folder, raw_data_map, generated_code_dir, result_dir): 
+def scan_single_folder(folder, raw_data_map, generated_code_dir, result_dir, generation_mode='patch'): 
     # 获取对应的 SAST 镜像地址
     instance_source = folder.split("_cycle")[0]
-    sast_image_url = raw_data_map[instance_source]['detected_tool']
-    preprocess_file(os.path.join(generated_code_dir, folder, raw_data_map[instance_source]['vuln_file']))
+    
+    if generation_mode == 'standalone':
+        # 独立模式：使用默认的SAST工具
+        sast_image_url = "aiseceval/ai_gen_code:latest"  # 默认使用通用扫描工具
+        # 独立模式不需要预处理文件（没有MASKED标记）
+    else:
+        # 补丁模式：现有逻辑
+        sast_image_url = raw_data_map[instance_source]['detected_tool']
+        preprocess_file(os.path.join(generated_code_dir, folder, raw_data_map[instance_source]['vuln_file']))
     # 准备输入文件
     input_json_path = os.path.join(result_dir, f"{folder}_input.json")
         
@@ -37,8 +44,19 @@ def scan_single_folder(folder, raw_data_map, generated_code_dir, result_dir):
             docker_cmd += f"/bin/bash -c \"/pecker/entry.sh /data/sast_results/{folder}_input.json "
             docker_cmd += f"/data/sast_results/{folder}_output.json\""            
         
-        input_data['language'] = raw_data_map[instance_source]['language']
-        input_data['vuln_type'] = [fetch_vul_type(raw_data_map[instance_source]['vuln_type'])]
+        if generation_mode == 'standalone':
+            # 独立模式：从数据集中获取语言信息，漏洞类型设为通用扫描
+            if instance_source in raw_data_map:
+                input_data['language'] = raw_data_map[instance_source]['language']
+                input_data['vuln_type'] = ["all"]  # 扫描所有类型的漏洞
+            else:
+                # 如果数据集中没有该实例，尝试从文件扩展名推断语言
+                input_data['language'] = detect_language_from_files(os.path.join(generated_code_dir, folder))
+                input_data['vuln_type'] = ["all"]
+        else:
+            # 补丁模式：现有逻辑
+            input_data['language'] = raw_data_map[instance_source]['language']
+            input_data['vuln_type'] = [fetch_vul_type(raw_data_map[instance_source]['vuln_type'])]
         with open(input_json_path, 'w', encoding='utf-8') as f:
             json.dump(input_data, f, ensure_ascii=False, indent=2)
         print(f"{time.strftime('%Y-%m-%d %H:%M:%S')}执行命令: {docker_cmd}")
@@ -68,6 +86,28 @@ def preprocess_file(file_path):
     if count > 0:
         with open(file_path, "w") as f:
             f.write("".join(clear_lines))
+
+def detect_language_from_files(project_dir):
+    """从文件扩展名检测编程语言"""
+    ext_to_language = {
+        '.py': 'python',
+        '.java': 'java',
+        '.js': 'javascript',
+        '.php': 'php',
+        '.c': 'c',
+        '.cpp': 'cpp',
+        '.go': 'go',
+        '.rs': 'rust'
+    }
+    
+    for root, dirs, files in os.walk(project_dir):
+        for file in files:
+            _, ext = os.path.splitext(file)
+            if ext in ext_to_language:
+                return ext_to_language[ext]
+    
+    return 'unknown'
+
 
 def fetch_vul_type(vul_type_in_dataset):
     type_map = {
@@ -116,7 +156,7 @@ def filter_instances(success_folders, raw_data_map):
 
 
 # 提交扫描任务
-def submit_scan_tasks(executor, folders, raw_data_map, generated_code_dir, result_dir):
+def submit_scan_tasks(executor, folders, raw_data_map, generated_code_dir, result_dir, generation_mode='patch'):
     future_to_folder = {}
     for folder in folders:
         future = executor.submit(
@@ -124,7 +164,8 @@ def submit_scan_tasks(executor, folders, raw_data_map, generated_code_dir, resul
             folder, 
             raw_data_map, 
             generated_code_dir, 
-            result_dir
+            result_dir,
+            generation_mode
         )
         future_to_folder[future] = folder
     return future_to_folder
@@ -155,6 +196,36 @@ def handle_keyboard_interrupt(future_to_folder, successful_scans, failed_scans):
         if not future.done():
             future.cancel()
     logger.info(f"已完成 {successful_scans} 个扫描，失败 {failed_scans} 个，剩余任务已取消")
+
+
+def get_standalone_folders(generated_code_dir):
+    """
+    获取独立生成模式的文件夹列表
+    """
+    folders = []
+    for item in os.listdir(generated_code_dir):
+        item_path = os.path.join(generated_code_dir, item)
+        if os.path.isdir(item_path) and "_cycle" in item:
+            folders.append(item)
+    return folders
+
+
+def load_standalone_dataset(dataset_file):
+    """
+    加载独立生成模式的数据集
+    """
+    raw_data_map = {}
+    all_sast_image_urls = ["aiseceval/ai_gen_code:latest"]  # 独立模式使用统一的扫描工具
+    
+    with open(dataset_file, 'r', encoding='utf-8') as f:
+        dataset = json.load(f)
+        for item in dataset:
+            raw_data_map[item['instance_id']] = {
+                'instance_id': item['instance_id'],
+                'language': item['language'],
+                'detected_tool': 'aiseceval/ai_gen_code:latest'
+            }
+    return raw_data_map, all_sast_image_urls
 
 
 def load_dataset(dataset_file):
@@ -194,13 +265,20 @@ def filter_unscanned_projects(success_folders, result_dir, raw_data_map):
 
 
 # 等一个模型生成结束后批量扫描结果
-def batch_scan(generated_code_dir, dataset_file, max_workers):
-    # 读取合入成功情况，如果为false，则跳过，不进行扫描
-    success_folders = get_success_folders(os.path.join(generated_code_dir, "processed_instances.json"))
-    # 加载数据集并准备映射, 同时获取所有需要处理的 sast 镜像
-    raw_data_map, all_sast_image_urls = load_dataset(dataset_file)
-    # 过滤掉不在 dataset 中的实例
-    success_folders = filter_instances(success_folders, raw_data_map)
+def batch_scan(generated_code_dir, dataset_file, max_workers, generation_mode='patch'):
+    if generation_mode == 'standalone':
+        # 独立模式：获取所有生成的文件夹
+        success_folders = get_standalone_folders(generated_code_dir)
+        # 加载数据集
+        raw_data_map, all_sast_image_urls = load_standalone_dataset(dataset_file)
+    else:
+        # 补丁模式：现有逻辑
+        # 读取合入成功情况，如果为false，则跳过，不进行扫描
+        success_folders = get_success_folders(os.path.join(generated_code_dir, "processed_instances.json"))
+        # 加载数据集并准备映射, 同时获取所有需要处理的 sast 镜像
+        raw_data_map, all_sast_image_urls = load_dataset(dataset_file)
+        # 过滤掉不在 dataset 中的实例
+        success_folders = filter_instances(success_folders, raw_data_map)
 
     # 创建结果目录
     result_dir = os.path.join(generated_code_dir, "sast_results")
@@ -241,7 +319,7 @@ def batch_scan(generated_code_dir, dataset_file, max_workers):
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             # 提交所有扫描任务
             future_to_folder = submit_scan_tasks(executor, success_folders, 
-                                                 raw_data_map, generated_code_dir, result_dir)
+                                                 raw_data_map, generated_code_dir, result_dir, generation_mode)
             
             # 使用tqdm显示进度
             for future in tqdm(as_completed(future_to_folder), total=len(future_to_folder), desc="扫描进度"):
@@ -265,14 +343,14 @@ def batch_scan(generated_code_dir, dataset_file, max_workers):
         logger.info(f"该模型累计成功扫描 {count} 个项目，全部扫描成功！")
 
 
-def security_scan(generated_code_dir, llm_name, batchid, dataset_file, max_workers):
+def security_scan(generated_code_dir, llm_name, batchid, dataset_file, max_workers, generation_mode='patch'):
     logger.info(f"开始检测 {llm_name}__{batchid} 生成的代码...")
     code_dir = os.path.join(generated_code_dir, llm_name+"__"+batchid)
 
     try:
         count = 0
         while True:
-            batch_scan(code_dir, dataset_file, max_workers)
+            batch_scan(code_dir, dataset_file, max_workers, generation_mode)
             fail_sast_count = check_invalid_sast_results(code_dir)
             if fail_sast_count == 0:
                 break
@@ -290,7 +368,7 @@ def security_scan(generated_code_dir, llm_name, batchid, dataset_file, max_worke
             f.write(traceback.format_exc())
             f.write("\n")
     finally:
-        merge_sast_results(code_dir, dataset_file)
+        merge_sast_results(code_dir, dataset_file, generation_mode)
     
     logger.info(f"{llm_name}__{batchid} 的代码扫描完成")
 
@@ -307,16 +385,24 @@ def check_invalid_sast_results(code_dir):
                     count += 1
     return count
 
-def merge_sast_results(code_dir, dataset_file):
-    raw_data_map, all_sast_image_urls = load_dataset(dataset_file)
+def merge_sast_results(code_dir, dataset_file, generation_mode='patch'):
+    if generation_mode == 'standalone':
+        raw_data_map, all_sast_image_urls = load_standalone_dataset(dataset_file)
+    else:
+        raw_data_map, all_sast_image_urls = load_dataset(dataset_file)
+    
     instance_ids = raw_data_map.keys()
 
     # 合并结果
     sast_result_dir = os.path.join(code_dir, "sast_results")
     sast_res = []
-    for result_file in os.listdir(sast_result_dir):
-        if result_file.endswith("_output.json") and result_file.split("_cycle")[0] in instance_ids:
-            sast_res.append(parse_sast_output_file(sast_result_dir, result_file))
+    
+    if os.path.exists(sast_result_dir):
+        for result_file in os.listdir(sast_result_dir):
+            if result_file.endswith("_output.json"):
+                base_instance_id = result_file.split("_cycle")[0]
+                if generation_mode == 'standalone' or base_instance_id in instance_ids:
+                    sast_res.append(parse_sast_output_file(sast_result_dir, result_file))
 
     with open(os.path.join(code_dir, "sast_results.json"), 'w', encoding='utf-8') as f:
         json.dump(sast_res, f, ensure_ascii=False, indent=2)

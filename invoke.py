@@ -5,33 +5,65 @@ import argparse
 from run_code_generation import gen_code
 from run_evaluate import evaluate_score, print_detail_result
 from run_security_scan import security_scan
+from run_standalone_generation import gen_standalone_code
+from run_standalone_evaluate import evaluate_standalone_score
 
 
 def invoke(model_name, batch_id, base_url, api_key, max_context_token, max_gen_token, github_token, 
-           dataset_path, retrieval_data_path, num_cycles, output_dir, max_workers, **model_args):
+           dataset_path, retrieval_data_path, num_cycles, output_dir, max_workers, generation_mode='patch', 
+           standalone_dataset=None, **model_args):
     start_time = time.time()
-    # 创建输出目录
-    raw_repo_dir = os.path.join(output_dir, "raw_repo")
-    if not os.path.exists(raw_repo_dir):
-        os.makedirs(raw_repo_dir)
-    generated_code_dir = os.path.join(output_dir, "generated_code")
-    if not os.path.exists(generated_code_dir):
-        os.makedirs(generated_code_dir)
+    
+    if generation_mode == 'standalone':
+        # 独立代码生成模式
+        if standalone_dataset is None:
+            raise ValueError("独立生成模式需要提供 standalone_dataset 参数")
+        
+        # 创建输出目录
+        generated_code_dir = os.path.join(output_dir, "generated_code")
+        if not os.path.exists(generated_code_dir):
+            os.makedirs(generated_code_dir)
+        
+        # 生成独立代码
+        gen_standalone_code(model_name, batch_id, base_url, api_key, max_context_token, max_gen_token,
+                           standalone_dataset, generated_code_dir, **model_args)
+        gen_time = time.time()
+        print(f"{model_name} 独立代码生成耗时: {gen_time - start_time} 秒")
+        
+        # 安全扫描
+        security_scan(generated_code_dir, model_name, batch_id, standalone_dataset, max_workers, 
+                     generation_mode='standalone')
+        sc_time = time.time()
+        print(f"{model_name} 安全扫描耗时: {sc_time - gen_time} 秒")
+        
+        # 评估分数
+        res = evaluate_standalone_score(generated_code_dir, model_name, batch_id, standalone_dataset)
+        print(f"独立生成模式评估结果: {res}")
+        
+    else:
+        # 原有的补丁生成模式
+        # 创建输出目录
+        raw_repo_dir = os.path.join(output_dir, "raw_repo")
+        if not os.path.exists(raw_repo_dir):
+            os.makedirs(raw_repo_dir)
+        generated_code_dir = os.path.join(output_dir, "generated_code")
+        if not os.path.exists(generated_code_dir):
+            os.makedirs(generated_code_dir)
 
-    # 生成代码
-    gen_code(model_name, batch_id, base_url, api_key, max_context_token, max_gen_token, github_token, 
-             dataset_path, retrieval_data_path, raw_repo_dir, generated_code_dir, num_cycles, **model_args)
-    gen_time = time.time()
-    print(f"{model_name} 生成代码耗时: {gen_time - start_time} 秒")
+        # 生成代码
+        gen_code(model_name, batch_id, base_url, api_key, max_context_token, max_gen_token, github_token, 
+                 dataset_path, retrieval_data_path, raw_repo_dir, generated_code_dir, num_cycles, **model_args)
+        gen_time = time.time()
+        print(f"{model_name} 生成代码耗时: {gen_time - start_time} 秒")
 
-    # 评估代码安全性
-    security_scan(generated_code_dir, model_name, batch_id, dataset_path, max_workers)
-    sc_time = time.time()
-    print(f"{model_name} 安全扫描耗时: {sc_time - gen_time} 秒")
+        # 评估代码安全性
+        security_scan(generated_code_dir, model_name, batch_id, dataset_path, max_workers)
+        sc_time = time.time()
+        print(f"{model_name} 安全扫描耗时: {sc_time - gen_time} 秒")
 
-    # 评估分数
-    res = evaluate_score(generated_code_dir, model_name, batch_id, dataset_path)
-    print_detail_result(output_dir, model_name, batch_id, res)
+        # 评估分数
+        res = evaluate_score(generated_code_dir, model_name, batch_id, dataset_path)
+        print_detail_result(output_dir, model_name, batch_id, res)
 
     end_time = time.time()
     print(f"{model_name} 总耗时: {end_time - start_time} 秒")
@@ -51,6 +83,9 @@ if __name__ == "__main__":
     parser.add_argument('--max_gen_token', type=int, default=60000, help='生成文本最大token数')
     parser.add_argument('--model_args', type=str, default="{}", help='模型参数')
     parser.add_argument('--max_workers', type=int, default=1, help='最大并发数（SAST扫描）')
+    parser.add_argument('--generation_mode', type=str, default='patch', choices=['patch', 'standalone'],
+                       help='代码生成模式: patch(补丁模式) 或 standalone(独立生成模式)')
+    parser.add_argument('--standalone_dataset', type=str, default="data/standalone_dataset_example.json", help='独立生成模式的功能描述数据集路径')
     
     args = parser.parse_args()
 
@@ -97,7 +132,7 @@ if __name__ == "__main__":
     
     # 调用模型
     invoke(args.model_name, args.batch_id, args.base_url, args.api_key, args.max_context_token, args.max_gen_token,
-           args.github_token, dataset_path, retrieval_data_path, num_cycles, args.output_dir, args.max_workers, 
-           **model_args)
+           args.github_token, dataset_path, retrieval_data_path, num_cycles, args.output_dir, args.max_workers,
+           generation_mode=args.generation_mode, standalone_dataset=args.standalone_dataset, **model_args)
 
 
